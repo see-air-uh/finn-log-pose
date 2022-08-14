@@ -1,5 +1,5 @@
 # GCS-obi-wan
-## A broker service that recieves and frowards all incoming requests.
+A broker service that recieves and frowards all incoming requests.
 
 ### Project Design
 The broker is using the external package Chi for routing and middle ware.
