@@ -1,10 +1,10 @@
 # GCS-obi-wan
-A broker service that recieves and frowards all incoming requests.
+## A broker service that recieves and frowards all incoming requests.
 
-# H2 Project Design
+### Project Design
 The broker is using the external package Chi for routing and middle ware.
 
-# H2 Project Breakdown
+### Project Breakdown
 
 The broker system first authenticates all incoming requests to check if they are valid.
 
