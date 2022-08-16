@@ -1,4 +1,4 @@
-module github.com/see-air-uh/GCS-obi-wan
+module github.com/see-air-uh/asxce-log-pose
 
 go 1.18
 
