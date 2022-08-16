@@ -1,4 +1,4 @@
-# GCS-obi-wan
+# asxce-log-pose
 A broker service that recieves and frowards all incoming requests.
 
 ### Project Design
