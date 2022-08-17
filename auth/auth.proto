@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+// name of the package
+package auth;
+
+//what is the go package called
+option go_package = "/auth";
+
+//  define the data being passed around
+
+// PAYLOAD
+message AuthRequest {
+  User argUser = 1;
+}
+
+message User {
+  string username = 1;
+  string password = 2;
+}
+
+// RESPONSE
+message AuthResponse {
+  bool authed = 1;
+}
+
+service AuthService { 
+  rpc AuthUser(AuthRequest) returns (AuthResponse);
+}
