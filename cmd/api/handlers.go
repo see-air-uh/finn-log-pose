@@ -60,6 +60,7 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 	})
 	if err != nil {
 		app.errorJSON(w, err)
+		return
 	} else if !authResp.Authed {
 		payload := jsonResponse{
 			Error:   true,
