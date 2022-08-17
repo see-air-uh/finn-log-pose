@@ -23,8 +23,11 @@ func main() {
 	}
 
 	// start http server
+	log.Printf("Starting log-pose on port %s", webPort)
+
 	err := srv.ListenAndServe()
 	if err != nil {
 		log.Panic(err)
 	}
+
 }
