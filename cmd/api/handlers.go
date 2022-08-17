@@ -66,6 +66,7 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 			Message: "failed to authenticate " + authPayload.Username,
 		}
 		app.writeJSON(w, http.StatusUnauthorized, payload)
+		return
 	}
 
 	payload := jsonResponse{
