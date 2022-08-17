@@ -1,6 +1,14 @@
 package main
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"github.com/see-air-uh/asxce-log-pose/auth"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
 
 type RequestPayload struct {
 	Action string      `json:"action"`
@@ -8,7 +16,7 @@ type RequestPayload struct {
 }
 
 type AuthPayload struct {
-	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -30,6 +38,45 @@ func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
 
 // a function that utilizes a GRPC conneciton to the auth
 // service to validify an email and a password
-func (app *Config) authenticate(w http.ResponseWriter, a AuthPayload) {
+func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) {
+
+	conn, err := grpc.Dial("toga:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	defer conn.Close()
+
+	a := auth.NewAuthServiceClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	authResp, err := a.AuthUser(ctx, &auth.AuthRequest{
+		ArgUser: &auth.User{
+			Username: authPayload.Username,
+			Password: authPayload.Password,
+		},
+	})
+	if err != nil {
+		app.errorJSON(w, err)
+	}else if !authResp.Authed {
+		payload := jsonResponse {
+			Error: true,
+			Message: "failed to authenticate " + authPayload.Username
+		}
+		app.writeJSON(w, http.StatusUnauthorized, payload)
+	}
+
+
+	
+	payload := jsonResponse{
+		Error:   false,
+		Message: "authenticated " + authPayload.Username,
+	}
+
+	app.writeJSON(w, http.StatusAccepted, payload)
+
+	
 
 }
