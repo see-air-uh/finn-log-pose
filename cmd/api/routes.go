@@ -20,6 +20,8 @@ func (app *Config) routes() http.Handler {
 		MaxAge:           300,
 	}))
 
+	mux.Use(middleware.Logger)
+
 	mux.Use(middleware.Heartbeat("/ping"))
 
 	// a single Point of entry that is short form for "sixty six"
