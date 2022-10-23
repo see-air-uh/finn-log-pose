@@ -1,5 +1,5 @@
-# asxce-log-pose
-A broker service that recieves and frowards all incoming requests.
+# finn-log-pose
+A broker service that receives and forwards all incoming requests.
 
 ### Project Design
 The broker is using the external package Chi for routing and middle ware.
