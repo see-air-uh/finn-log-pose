@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/see-air-uh/asxce-log-pose/auth"
+	"github.com/see-air-uh/finn-log-pose/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

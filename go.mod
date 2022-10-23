@@ -1,4 +1,4 @@
-module github.com/see-air-uh/asxce-log-pose
+module github.com/see-air-uh/finn-log-pose
 
 go 1.18
 
