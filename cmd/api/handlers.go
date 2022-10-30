@@ -40,7 +40,7 @@ func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
 // service to validify an email and a password
 func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) {
 
-	conn, err := grpc.Dial("toga:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.Dial("ditto:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
