@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+// what is the package called
+package logs;
+
+// what is the go package called
+option go_package = "/logs";
+
+// define the data passed around
+message Log {
+  string name = 1;
+  string data = 2;
+}
+message LogResponse {
+  string result = 1;
+}
+message LogRequest {
+  Log logEntry = 1;
+}
+
+// define what function will be ran
+service LogService {
+  rpc WriteLog(LogRequest) returns (LogResponse);
+}

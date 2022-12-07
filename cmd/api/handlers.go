@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/see-air-uh/finn-log-pose/auth"
+	"github.com/see-air-uh/finn-log-pose/logs"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -54,19 +54,43 @@ func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func logmessage(name string, msg string) error {
+	conn, err := grpc.Dial("inspector-gadget:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	if err != nil {
+		return fmt.Errorf("error. couldn't connect to logger")
+	}
+	defer conn.Close()
+
+	l := logs.NewLogServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err = l.WriteLog(ctx, &logs.LogRequest{
+		LogEntry: &logs.Log{
+			Name: name,
+			Data: msg,
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("error. error when sending log, ", err)
+	}
+	return nil
+}
+
 func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPayload) {
-	log.Println("Done...")
-	conn, err := grpc.Dial("localhost:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+
+	conn, err := grpc.Dial("ditto:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
 	}
 	defer conn.Close()
-
 	a := auth.NewAuthServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-	log.Println("Done...")
+
 	cruResp, err := a.CreateUser(ctx, &auth.CreateUserRequest{
 		ArgUser: &auth.M_User{
 			Email:     cruPayload.Email,
@@ -77,19 +101,12 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 		Password: cruPayload.Password,
 	})
 
-	log.Println("Done...")
 	if err != nil {
 		app.errorJSON(w, err)
 		return
 	}
-	//  else if !authResp.Authed {
-	// 	payload := jsonResponse{
-	// 		Error:   true,
-	// 		Message: "failed to authenticate " + authPayload.Username,
-	// 	}
-	// 	app.writeJSON(w, http.StatusUnauthorized, payload)
-	// 	return
-	// }
+
+	logmessage("created user", "created user with username "+cruResp.Username)
 
 	payload := jsonResponse{
 		Error:   false,
@@ -101,7 +118,7 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 // a function that utilizes a GRPC conneciton to the auth
 // service to validify an email and a password
 func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) {
-	conn, err := grpc.Dial("localhost:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.Dial("ditto:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -132,11 +149,16 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 	// 	return
 	// }
 
+	logmessage("authed user", "authed user"+authResp.Username)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	// logmessage("authenticated user", fmt.Sprintf("authenticated user with username ", authResp.Username))
 	payload := jsonResponse{
 		Error:   false,
 		Message: "authenticated user " + authResp.Username,
 		Data:    authResp.PasetoToken,
 	}
-	log.Println("DOWN HERE")
 	app.writeJSON(w, http.StatusAccepted, payload)
 }
