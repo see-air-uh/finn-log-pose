@@ -28,5 +28,9 @@ func (app *Config) routes() http.Handler {
 	// this is so every request will be executing request 66
 	mux.Post("/ss", app.ExecuteRequest)
 
+	// add route for get and post balance
+	mux.Get("/balance/{user}", app.GetBalance)
+	mux.Post("/balance/{user}", app.UpdateBalance)
+
 	return mux
 }

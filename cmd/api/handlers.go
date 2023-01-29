@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/see-air-uh/finn-log-pose/auth"
 	"github.com/see-air-uh/finn-log-pose/logs"
 	"google.golang.org/grpc"
@@ -30,6 +33,16 @@ type CreateUserPayload struct {
 	Email     string `json:"email"`
 	Username  string `json:"username"`
 	Password  string `json:"password"`
+}
+
+type BalanceResponse struct {
+	Error   bool    `json:"error"`
+	Message string  `json:"message"`
+	Data    float32 `json:"data"`
+}
+
+type UpdateBalancePayload struct {
+	TransactionAmount float32 `json:"transactionAmount`
 }
 
 func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
@@ -161,4 +174,67 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 		Data:    authResp.PasetoToken,
 	}
 	app.writeJSON(w, http.StatusAccepted, payload)
+}
+
+// TODO: Create a function that authenticates, then gets the balance
+func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	resp, err := http.Get(fmt.Sprintf("http://localhost:9000/balance/%s", username))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data BalanceResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+// TODO: Create a function that authenticates, then updates the balance
+func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "user")
+	var requestPayload struct {
+		TransactionAmount float32 `json:"transactionAmount"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	values := map[string]float32{"transactionAmount": requestPayload.TransactionAmount}
+	json_data, err := json.Marshal(values)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("http://localhost:9000/balance/%s", username), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data BalanceResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+
 }
