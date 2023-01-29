@@ -42,13 +42,13 @@ To utilize this function send an HTTP POST request to the server route "/balance
 where n represents a float number. A negative number will decrement the total balance where a positive number will increment the balance. A user's balance can not fall below zero, ex: if a user has a balance of 1000, sending a value of -10000 as transactionData will throw an error.
 
 This will return a response in the format:
-
+```
 {
   Error bool
   Message string
   Data float32
 }
-
+```
 where Error represents if an error has occurred,
 Message represents a server message describing what has occurred in the backend,
 and Data represents the current user's new balance.
