@@ -180,7 +180,7 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "user")
-	resp, err := http.Get(fmt.Sprintf("http://localhost:9000/balance/%s", username))
+	resp, err := http.Get(fmt.Sprintf("http://mrkrabs:9000/balance/%s", username))
 
 	if err != nil {
 		app.errorJSON(w, err)
@@ -218,7 +218,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("http://localhost:9000/balance/%s", username), "application/json", bytes.NewBuffer((json_data)))
+	resp, err := http.Post(fmt.Sprintf("http://mrkrabs:9000/balance/%s", username), "application/json", bytes.NewBuffer((json_data)))
 
 	if err != nil {
 		app.errorJSON(w, err)
