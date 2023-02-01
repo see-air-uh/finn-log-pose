@@ -56,3 +56,31 @@ Message represents a server message describing what has occurred in the backend,
 and Data represents the current user's new balance.
 
 Currently, the getBalance function has not implemented token checks (unauthed users can check balances for all users.) Token checks will be added in the future to restrict global access.
+
+## Get all transactions
+The get all transactions function allows a user to get all the transactional data for their account. 
+
+To utilize this function send an HTTP POST request to the server route "/transaction/{user}" where {user} is the current users username
+
+This will return a response in the format:
+```
+{
+  Error bool
+  Message string
+  Data []Transaction
+}
+```
+where Error represents if an error has occurred,
+Message represents a server message describing what has happened on the server side,
+and Data represents a list of transactions in the type of the following:
+```
+type Transaction struct {
+	TransactionID          int     `json:"-"`
+	UserID                 string  `json:"id"`
+	TransactionAmount      float32 `json:"transactionAmount"`
+	TransactionName        string  `json:"transactionName"`
+	TransactionDescription string  `json:"transactionDescription"`
+}
+```
+
+Currently, the getBalance function has not implemented token checks (unauthed users can check balances for all users.) Token checks will be added in the future to restrict global access.
