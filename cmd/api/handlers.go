@@ -42,7 +42,21 @@ type BalanceResponse struct {
 }
 
 type UpdateBalancePayload struct {
-	TransactionAmount float32 `json:"transactionAmount`
+	TransactionAmount float32 `json:"transactionAmount"`
+}
+
+type Transaction struct {
+	TransactionID          int     `json:"-"`
+	UserID                 string  `json:"id"`
+	TransactionAmount      float32 `json:"transactionAmount"`
+	TransactionName        string  `json:"transactionName"`
+	TransactionDescription string  `json:"transactionDescription"`
+}
+
+type TransactionResponse struct {
+	Error   bool          `json:"error"`
+	Message string        `json:"message"`
+	Data    []Transaction `json:"data"`
 }
 
 func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +218,9 @@ func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "user")
 	var requestPayload struct {
-		TransactionAmount float32 `json:"transactionAmount"`
+		TransactionAmount      float32 `json:"transactionAmount"`
+		TransactionName        string  `json:"transactionName"`
+		TransactionDescription string  `json:"transactionDescription"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
@@ -212,8 +228,8 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	values := map[string]float32{"transactionAmount": requestPayload.TransactionAmount}
-	json_data, err := json.Marshal(values)
+	// values := map[string]float32{"transactionAmount": requestPayload.TransactionAmount, }
+	json_data, err := json.Marshal(&requestPayload)
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -237,4 +253,23 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusAccepted, data)
 
+}
+func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+
+	resp, err := http.Get(fmt.Sprintf("http://mrkrabs:9000/transaction/%s", u))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var trans TransactionResponse
+	err = decoder.Decode(&trans)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, trans)
 }

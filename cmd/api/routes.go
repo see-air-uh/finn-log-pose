@@ -32,5 +32,7 @@ func (app *Config) routes() http.Handler {
 	mux.Get("/balance/{user}", app.GetBalance)
 	mux.Post("/balance/{user}", app.UpdateBalance)
 
+	mux.Get("/transaction/{user}", app.GetAllTransactions)
+
 	return mux
 }
