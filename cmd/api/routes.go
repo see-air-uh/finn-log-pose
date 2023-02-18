@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -24,15 +25,24 @@ func (app *Config) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
+	mux.Route("/app", func(r chi.Router) {
+		log.Println("entering in app??")
+		r.Use(AuthorizeRequest)
+		// add route for get and post balance
+		r.Get("/balance/{user}", app.GetBalance)
+		r.Post("/balance/{user}", app.UpdateBalance)
+
+		r.Get("/transaction/{user}", app.GetAllTransactions)
+	})
+
 	// a single Point of entry that is short form for "sixty six"
 	// this is so every request will be executing request 66
-	mux.Post("/ss", app.ExecuteRequest)
+	mux.Route("/ss", func (r chi.Router) {
+		r.Post("/", app.ExecuteRequest)
+	})
 
-	// add route for get and post balance
-	mux.Get("/balance/{user}", app.GetBalance)
-	mux.Post("/balance/{user}", app.UpdateBalance)
 
-	mux.Get("/transaction/{user}", app.GetAllTransactions)
+
 
 	return mux
 }
