@@ -27,7 +27,7 @@ func (app *Config) routes() http.Handler {
 
 	mux.Route("/app", func(r chi.Router) {
 		log.Println("entering in app??")
-		r.Use(AuthorizeRequest)
+		r.Use(app.AuthorizeRequest)
 		// add route for get and post balance
 		r.Get("/balance/{user}", app.GetBalance)
 		r.Post("/balance/{user}", app.UpdateBalance)

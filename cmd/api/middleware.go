@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func AuthorizeRequest(next http.Handler) http.Handler {
+func (app *Config)AuthorizeRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request_token := r.Header.Get("Token")
 
@@ -23,7 +23,7 @@ func AuthorizeRequest(next http.Handler) http.Handler {
 		}
 
 		// check if token is correct
-		conn, err := grpc.Dial("localhost:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+		conn, err := grpc.Dial(app.Ditto, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 		if err != nil {
 			connFailed(w)
 			return
