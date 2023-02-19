@@ -81,8 +81,11 @@ func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func logmessage(name string, msg string) error {
-	conn, err := grpc.Dial("inspector-gadget:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+func (app *Config) logmessage(name string, msg string) error {
+	if app.DisableLogger == "true" {
+		return nil
+	}
+	conn, err := grpc.Dial(app.InspectorGadget, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		return fmt.Errorf("error. couldn't connect to logger")
 	}
@@ -101,14 +104,14 @@ func logmessage(name string, msg string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("error. error when sending log, ", err)
+		return fmt.Errorf("error. error when sending log, %s", err)
 	}
 	return nil
 }
 
 func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPayload) {
 
-	conn, err := grpc.Dial("ditto:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.Dial(app.Ditto, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -133,7 +136,7 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 		return
 	}
 
-	logmessage("created user", "created user with username "+cruResp.Username)
+	app.logmessage("created user", "created user with username "+cruResp.Username)
 
 	payload := jsonResponse{
 		Error:   false,
@@ -145,7 +148,7 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 // a function that utilizes a GRPC conneciton to the auth
 // service to validify an email and a password
 func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) {
-	conn, err := grpc.Dial("ditto:50001", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.Dial(app.Ditto, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -167,16 +170,8 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 		app.errorJSON(w, err)
 		return
 	}
-	//  else if !authResp.Authed {
-	// 	payload := jsonResponse{
-	// 		Error:   true,
-	// 		Message: "failed to authenticate " + authPayload.Username,
-	// 	}
-	// 	app.writeJSON(w, http.StatusUnauthorized, payload)
-	// 	return
-	// }
 
-	logmessage("authed user", "authed user"+authResp.Username)
+	// logmessage("authed user", "authed user"+authResp.Username)
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -189,13 +184,20 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 	}
 	app.writeJSON(w, http.StatusAccepted, payload)
 }
-
-// TODO: Create a function that authenticates, then gets the balance
 func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "user")
-	resp, err := http.Get(fmt.Sprintf("http://mrkrabs:9000/balance/%s", username))
 
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+
+	resp, err := http.Get(fmt.Sprintf("%s/balance/%s",app.Mrkrabs, username))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -213,10 +215,19 @@ func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusAccepted, data)
 }
-
 // TODO: Create a function that authenticates, then updates the balance
 func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
+
 	username := chi.URLParam(r, "user")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
 	var requestPayload struct {
 		TransactionAmount      float32 `json:"transactionAmount"`
 		TransactionName        string  `json:"transactionName"`
@@ -234,7 +245,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("http://mrkrabs:9000/balance/%s", username), "application/json", bytes.NewBuffer((json_data)))
+	resp, err := http.Post(fmt.Sprintf("%s/balance/%s",app.Mrkrabs, username), "application/json", bytes.NewBuffer((json_data)))
 
 	if err != nil {
 		app.errorJSON(w, err)
@@ -252,12 +263,19 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.writeJSON(w, http.StatusAccepted, data)
-
 }
 func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	u := chi.URLParam(r, "user")
 
-	resp, err := http.Get(fmt.Sprintf("http://mrkrabs:9000/transaction/%s", u))
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if u != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s",app.Mrkrabs ,u))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
