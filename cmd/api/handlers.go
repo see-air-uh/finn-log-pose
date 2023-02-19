@@ -82,6 +82,9 @@ func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Config) logmessage(name string, msg string) error {
+	if app.DisableLogger == "true" {
+		return nil
+	}
 	conn, err := grpc.Dial(app.InspectorGadget, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		return fmt.Errorf("error. couldn't connect to logger")
