@@ -297,6 +297,35 @@ func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 	app.writeJSON(w, http.StatusAccepted, trans)
 }
+func (app *Config) GetAllTransactionsOfCategory(w http.ResponseWriter, r* http.Request){
+	u := chi.URLParam(r, "user")
+	c := chi.URLParam(r, "category")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if u != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/category/%s",app.Mrkrabs ,u, c))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var transactions TransactionResponse
+	err = decoder.Decode(&transactions)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, transactions)
+
+}
 func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Request){
 	u := chi.URLParam(r, "user")
 
