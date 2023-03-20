@@ -46,11 +46,12 @@ type UpdateBalancePayload struct {
 }
 
 type Transaction struct {
-	TransactionID          int     `json:"-"`
-	UserID                 string  `json:"id"`
+	TransactionID          int     `json:"transaction_id"`
+	UserID                 string  `json:"user_id"`
 	TransactionAmount      float32 `json:"transactionAmount"`
 	TransactionName        string  `json:"transactionName"`
 	TransactionDescription string  `json:"transactionDescription"`
+	TransactionCategory string `json:"transactionCategory"`
 }
 
 type TransactionResponse struct {
@@ -148,11 +149,13 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 // a function that utilizes a GRPC conneciton to the auth
 // service to validify an email and a password
 func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) {
+	fmt.Print("Here")
 	conn, err := grpc.Dial(app.Ditto, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		app.errorJSON(w, err)
 		return
 	}
+	fmt.Print("THere")
 	defer conn.Close()
 
 	a := auth.NewAuthServiceClient(conn)
@@ -219,7 +222,7 @@ func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "user")
-
+	fmt.Print("before here payload\n")
 	// check if username passed in is same for the requested user balance
 	// TODO: Change this if statement to get the users associated with this account
 	if username != r.Header.Get("user"){
@@ -227,11 +230,12 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
-
+	fmt.Print("before reading payload\n")
 	var requestPayload struct {
 		TransactionAmount      float32 `json:"transactionAmount"`
 		TransactionName        string  `json:"transactionName"`
 		TransactionDescription string  `json:"transactionDescription"`
+		TransactionCategory string `json:"transactionCategory"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
@@ -239,6 +243,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
+	fmt.Print("after reading payload\n")
 	// values := map[string]float32{"transactionAmount": requestPayload.TransactionAmount, }
 	json_data, err := json.Marshal(&requestPayload)
 	if err != nil {
@@ -251,6 +256,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
+	fmt.Print("after api ping\n")
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
