@@ -297,3 +297,88 @@ func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 	app.writeJSON(w, http.StatusAccepted, trans)
 }
+func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Request){
+	u := chi.URLParam(r, "user")
+
+	if u != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+	var requestPayload struct {
+		TransactionID int `json:"transactionID"`
+		Category string `json:"transactionCategory"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	json_data, err := json.Marshal(&requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("%s/transaction/%s/category", app.Mrkrabs, u), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+
+	var data struct {
+		Error bool `json:"error"`
+		Message string `json:"message"`
+	}
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, "Updated Category")
+
+}
+
+func (app *Config) GetCategories(w http.ResponseWriter, r *http.Request){
+	u := chi.URLParam(r,"user")
+	if u != r.Header.Get("user"){
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/category",app.Mrkrabs ,u))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	/*
+	    "error": false,
+    "message": "successfully grabbed all categories for user2",
+    "data": [
+        "",
+        "Scuba diving"
+    ]
+	*/
+	
+	var categories struct {
+		Error bool `json:"error"`
+		Message string `json:"message"`
+		Data []string `json:"data"`
+	}
+	fmt.Print(categories)
+	fmt.Print("\ncategories\n")
+	fmt.Print("\n")
+	err = decoder.Decode(&categories)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, categories.Data)
+}

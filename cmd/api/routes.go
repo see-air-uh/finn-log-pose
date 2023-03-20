@@ -33,6 +33,9 @@ func (app *Config) routes() http.Handler {
 		r.Post("/balance/{user}", app.UpdateBalance)
 
 		r.Get("/transaction/{user}", app.GetAllTransactions)
+
+		r.Get("/transaction/{user}/category", app.GetCategories)
+		r.Post("/transaction/{user}/category", app.UpdateTransactionCategory)
 	})
 
 	// a single Point of entry that is short form for "sixty six"
