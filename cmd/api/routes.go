@@ -29,24 +29,34 @@ func (app *Config) routes() http.Handler {
 		log.Println("entering in app??")
 		r.Use(app.AuthorizeRequest)
 		// add route for get and post balance
-		r.Get("/balance/{user}", app.GetBalance)
-		r.Post("/balance/{user}", app.UpdateBalance)
+		r.Get("/balance/{user}/{account}", app.GetBalance)
+		r.Post("/balance/{user}/{account}", app.UpdateBalance)
 
-		r.Get("/transaction/{user}", app.GetAllTransactions)
-		r.Get("/transaction/{user}/category/{category}", app.GetAllTransactionsOfCategory)
+		r.Get("/accounts/{user}", app.GetAccounts)
+		r.Post("/accounts/add/{user}/{account}", app.AddAccount)
+		r.Post("/accounts/add_user/{user}/{account}/{user2}", app.AddUserToAccount)
 
-		r.Get("/transaction/{user}/category", app.GetCategories)
-		r.Post("/transaction/{user}/category", app.UpdateTransactionCategory)
+		r.Get("/recurring/{user}/{account}", app.GetReccurringPayments)
+		r.Post("/recurring/add/{user}/{account}", app.AddReccurringPayment)
+		r.Post("/recurring/history/{user}", app.GetPaymentHistory)
+
+		r.Get("/transaction/{user}/{account}", app.GetAllTransactions)
+		r.Get("/transaction/{user}/{account}/category/{category}", app.GetAllTransactionsOfCategory)
+
+		r.Get("/transaction/{user}/{account}/category", app.GetCategories)
+		r.Post("/transaction/{user}/{account}/category", app.UpdateTransactionCategory)
+
+		r.Get("/debt/{user}/{account}", app.GetAllDebts)
+		r.Post("/debt/{user}/{account}", app.CreateDebt)
+		r.Get("/debt/{user}/{account}/{debtID}", app.GetDebtByID)
+		r.Post("/debt/{user}/{account}/{debtID}", app.MakeDebtPayment)
 	})
 
 	// a single Point of entry that is short form for "sixty six"
 	// this is so every request will be executing request 66
-	mux.Route("/ss", func (r chi.Router) {
+	mux.Route("/ss", func(r chi.Router) {
 		r.Post("/", app.ExecuteRequest)
 	})
-
-
-
 
 	return mux
 }

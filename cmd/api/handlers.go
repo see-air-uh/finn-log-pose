@@ -51,13 +51,83 @@ type Transaction struct {
 	TransactionAmount      float32 `json:"transactionAmount"`
 	TransactionName        string  `json:"transactionName"`
 	TransactionDescription string  `json:"transactionDescription"`
-	TransactionCategory string `json:"transactionCategory"`
+	TransactionCategory    string  `json:"transactionCategory"`
 }
 
 type TransactionResponse struct {
 	Error   bool          `json:"error"`
 	Message string        `json:"message"`
 	Data    []Transaction `json:"data"`
+}
+
+type AccountsResponse struct {
+	Error   bool      `json:"error"`
+	Message string    `json:"message"`
+	Data    []Account `json:"data"`
+}
+
+type Account struct {
+	AccountID   int    `json:"id"`
+	AccountName string `json:"accountname"`
+	Email       string `json:"email"`
+	IsPrimary   bool   `json:"isprimary"`
+}
+
+type AddAccountResponse struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+}
+
+type AddUserToAccountResponse struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+}
+
+type RecurringPayment struct {
+	PaymentID          int     `json:"-"`
+	UserName           string  `json:"username"`
+	PaymentAmount      float32 `json:"amount"`
+	PaymentName        string  `json:"paymentName"`
+	PaymentDescription string  `json:"paymentDescription"`
+	PaymentDate        string  `json:"paymentDate"`
+	PaymentType        string  `json:"paymentType"`
+}
+
+type RecurringPaymentResponse struct {
+	Error   bool               `json:"error"`
+	Message string             `json:"message"`
+	Data    []RecurringPayment `json:"data"`
+}
+
+type PaymentHistory struct {
+	ID        int    `json:"paymenthistoryid"`
+	paymentID int    `json:"paymentid"`
+	date      string `json:"paymenthistorydate"`
+	status    string `json:"paymenthistorystatus"`
+}
+
+type PaymentHistoryPayload struct {
+	Error   bool             `json:"error"`
+	Message string           `json:"message"`
+	Data    []PaymentHistory `json:"data"`
+}
+
+type DebtResponse struct {
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+	Data    []Debt `json:"data"`
+}
+
+type Debt struct {
+	DebtID            int     `json:"debtID"`
+	UserID            string  `json:"user_id"`
+	TotalOwing        float32 `json:"total_owing"`
+	TotalDebtPayments float32 `json:"total_payments"`
+}
+
+type DebtPayment struct {
+	PaymentID     int `json:"payment_id"`
+	TransactionID int `json:"transaction_id"`
 }
 
 func (app *Config) ExecuteRequest(w http.ResponseWriter, r *http.Request) {
@@ -190,17 +260,17 @@ func (app *Config) authenticate(w http.ResponseWriter, authPayload AuthPayload) 
 func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
 
 	// check if username passed in is same for the requested user balance
 	// TODO: Change this if statement to get the users associated with this account
-	if username != r.Header.Get("user"){
+	if username != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
 
-
-	resp, err := http.Get(fmt.Sprintf("%s/balance/%s",app.Mrkrabs, username))
+	resp, err := http.Get(fmt.Sprintf("%sbalance/%s/%s", app.Mrkrabs, username, account))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -218,14 +288,16 @@ func (app *Config) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusAccepted, data)
 }
+
 // TODO: Create a function that authenticates, then updates the balance
 func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 
 	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
 	fmt.Print("before here payload\n")
 	// check if username passed in is same for the requested user balance
 	// TODO: Change this if statement to get the users associated with this account
-	if username != r.Header.Get("user"){
+	if username != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
@@ -235,7 +307,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		TransactionAmount      float32 `json:"transactionAmount"`
 		TransactionName        string  `json:"transactionName"`
 		TransactionDescription string  `json:"transactionDescription"`
-		TransactionCategory string `json:"transactionCategory"`
+		TransactionCategory    string  `json:"transactionCategory"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
@@ -250,7 +322,7 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		app.errorJSON(w, err)
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("%s/balance/%s",app.Mrkrabs, username), "application/json", bytes.NewBuffer((json_data)))
+	resp, err := http.Post(fmt.Sprintf("%sbalance/%s/%s", app.Mrkrabs, username, account), "application/json", bytes.NewBuffer((json_data)))
 
 	if err != nil {
 		app.errorJSON(w, err)
@@ -270,18 +342,240 @@ func (app *Config) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusAccepted, data)
 }
-func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
-	u := chi.URLParam(r, "user")
+
+func (app *Config) GetAccounts(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
 
 	// check if username passed in is same for the requested user balance
 	// TODO: Change this if statement to get the users associated with this account
-	if u != r.Header.Get("user"){
+	if username != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
 
-	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s",app.Mrkrabs ,u))
+	resp, err := http.Get(fmt.Sprintf("%saccounts/%s", app.Mrkrabs, username))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data AccountsResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) AddAccount(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%saccounts/add/%s/%s", app.Mrkrabs, username, account), "application/json", bytes.NewBuffer([]byte{}))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data AddAccountResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) AddUserToAccount(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+	u2 := chi.URLParam(r, "user2")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Post(fmt.Sprintf("%saccounts/add/%s/%s/%s", app.Mrkrabs, username, account, u2), "application/json", bytes.NewBuffer([]byte{}))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data AddUserToAccountResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) GetReccurringPayments(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%srecurring/%s/%s", app.Mrkrabs, username, account))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data RecurringPaymentResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) AddReccurringPayment(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	if u != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+	var requestPayload struct {
+		PaymentAmount      float32 `json:"amount"`
+		PaymentName        string  `json:"paymentName"`
+		PaymentDescription string  `json:"paymentDescription"`
+		PaymentDate        string  `json:"paymentDate"`
+		PaymentType        string  `json:"paymentType"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	json_data, err := json.Marshal(&requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("%srecurring/add/%s/%s", app.Mrkrabs, u, account), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+
+	var data struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+		Data    int32  `json:"data"`
+	}
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, data)
+
+}
+
+func (app *Config) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+
+	if u != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+	var requestPayload struct {
+		PaymentID int `json:"paymentID"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	json_data, err := json.Marshal(&requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("%srecurring/history/%s", app.Mrkrabs, u), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+	var data PaymentHistoryPayload
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, data)
+
+}
+
+func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if u != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%stransaction/%s/%s", app.Mrkrabs, u, account))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -297,19 +591,20 @@ func (app *Config) GetAllTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 	app.writeJSON(w, http.StatusAccepted, trans)
 }
-func (app *Config) GetAllTransactionsOfCategory(w http.ResponseWriter, r* http.Request){
+func (app *Config) GetAllTransactionsOfCategory(w http.ResponseWriter, r *http.Request) {
 	u := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
 	c := chi.URLParam(r, "category")
 
 	// check if username passed in is same for the requested user balance
 	// TODO: Change this if statement to get the users associated with this account
-	if u != r.Header.Get("user"){
+	if u != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
 
-	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/category/%s",app.Mrkrabs ,u, c))
+	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/%s/category/%s", app.Mrkrabs, u, account, c))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -326,17 +621,17 @@ func (app *Config) GetAllTransactionsOfCategory(w http.ResponseWriter, r* http.R
 	app.writeJSON(w, http.StatusAccepted, transactions)
 
 }
-func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Request){
+func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Request) {
 	u := chi.URLParam(r, "user")
 
-	if u != r.Header.Get("user"){
+	if u != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
 	var requestPayload struct {
-		TransactionID int `json:"transactionID"`
-		Category string `json:"transactionCategory"`
+		TransactionID int    `json:"transactionID"`
+		Category      string `json:"transactionCategory"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
@@ -359,7 +654,7 @@ func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Requ
 	decoder := json.NewDecoder(resp.Body)
 
 	var data struct {
-		Error bool `json:"error"`
+		Error   bool   `json:"error"`
 		Message string `json:"message"`
 	}
 
@@ -372,15 +667,15 @@ func (app *Config) UpdateTransactionCategory(w http.ResponseWriter, r *http.Requ
 
 }
 
-func (app *Config) GetCategories(w http.ResponseWriter, r *http.Request){
-	u := chi.URLParam(r,"user")
-	if u != r.Header.Get("user"){
+func (app *Config) GetCategories(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+	if u != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
 
-	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/category",app.Mrkrabs ,u))
+	resp, err := http.Get(fmt.Sprintf("%s/transaction/%s/category", app.Mrkrabs, u))
 	if err != nil {
 		app.errorJSON(w, err)
 		return
@@ -388,18 +683,18 @@ func (app *Config) GetCategories(w http.ResponseWriter, r *http.Request){
 	defer resp.Body.Close()
 	decoder := json.NewDecoder(resp.Body)
 	/*
-	    "error": false,
-    "message": "successfully grabbed all categories for user2",
-    "data": [
-        "",
-        "Scuba diving"
-    ]
+			    "error": false,
+		    "message": "successfully grabbed all categories for user2",
+		    "data": [
+		        "",
+		        "Scuba diving"
+		    ]
 	*/
-	
+
 	var categories struct {
-		Error bool `json:"error"`
-		Message string `json:"message"`
-		Data []string `json:"data"`
+		Error   bool     `json:"error"`
+		Message string   `json:"message"`
+		Data    []string `json:"data"`
 	}
 	fmt.Print(categories)
 	fmt.Print("\ncategories\n")
@@ -410,4 +705,170 @@ func (app *Config) GetCategories(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	app.writeJSON(w, http.StatusAccepted, categories.Data)
+}
+
+func (app *Config) GetAllDebts(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%sdebt/%s/%s", app.Mrkrabs, username, account))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data DebtResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) CreateDebt(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+
+	if u != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	var requestPayload struct {
+		TotalOwing float32 `json:"total_owing"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	json_data, err := json.Marshal(&requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("%sdebt/%s/%s", app.Mrkrabs, u, account), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+
+	var data struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+		Data    int    `json:"data"`
+	}
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, "Added Debt")
+
+}
+
+func (app *Config) GetDebtByID(w http.ResponseWriter, r *http.Request) {
+
+	username := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+	debtIDString := chi.URLParam(r, "debtID")
+
+	// check if username passed in is same for the requested user balance
+	// TODO: Change this if statement to get the users associated with this account
+	if username != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	resp, err := http.Get(fmt.Sprintf("%sdebt/%s/%s/%s", app.Mrkrabs, username, account, debtIDString))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+		Data    Debt   `json:"data"`
+	}
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	app.writeJSON(w, http.StatusAccepted, data)
+}
+
+func (app *Config) MakeDebtPayment(w http.ResponseWriter, r *http.Request) {
+	u := chi.URLParam(r, "user")
+	account := chi.URLParam(r, "account")
+	debtIDString := chi.URLParam(r, "debtID")
+
+	if u != r.Header.Get("user") {
+		w.WriteHeader(http.StatusUnauthorized)
+		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
+		return
+	}
+
+	var requestPayload struct {
+		Amount float32 `json:"amount"`
+	}
+
+	err := app.readJSON(w, r, &requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	json_data, err := json.Marshal(&requestPayload)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	resp, err := http.Post(fmt.Sprintf("%sdebt/%s/%s/%s", app.Mrkrabs, u, account, debtIDString), "application/json", bytes.NewBuffer((json_data)))
+
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+	decoder := json.NewDecoder(resp.Body)
+
+	var data struct {
+		Error   bool   `json:"error"`
+		Message string `json:"message"`
+		Data    string `json:"data"`
+	}
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	app.writeJSON(w, http.StatusAccepted, "Updated debt")
+
 }
