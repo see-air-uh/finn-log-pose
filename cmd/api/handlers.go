@@ -84,7 +84,7 @@ type AddUserToAccountResponse struct {
 }
 
 type RecurringPayment struct {
-	PaymentID          int     `json:"-"`
+	PaymentID          int     `json:"paymentid"`
 	UserName           string  `json:"username"`
 	PaymentAmount      float32 `json:"amount"`
 	PaymentName        string  `json:"paymentName"`
@@ -100,10 +100,10 @@ type RecurringPaymentResponse struct {
 }
 
 type PaymentHistory struct {
-	ID        int    `json:"paymenthistoryid"`
-	paymentID int    `json:"paymentid"`
-	date      string `json:"paymenthistorydate"`
-	status    string `json:"paymenthistorystatus"`
+	PaymentHistoryID     int    `json:"paymenthistoryid"`
+	PaymentID            int    `json:"paymentID"`
+	PaymentHistoryDate   string `json:"paymentHistoryDate"`
+	PaymentHistoryStatus bool   `json:"paymentHistoryStatus"`
 }
 
 type PaymentHistoryPayload struct {
@@ -524,27 +524,15 @@ func (app *Config) AddReccurringPayment(w http.ResponseWriter, r *http.Request) 
 
 func (app *Config) GetPaymentHistory(w http.ResponseWriter, r *http.Request) {
 	u := chi.URLParam(r, "user")
+	r_id := chi.URLParam(r, "recurring_id")
 
 	if u != r.Header.Get("user") {
 		w.WriteHeader(http.StatusUnauthorized)
 		app.errorJSON(w, fmt.Errorf("error. Insufficient access"))
 		return
 	}
-	var requestPayload struct {
-		PaymentID int `json:"paymentID"`
-	}
 
-	err := app.readJSON(w, r, &requestPayload)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	json_data, err := json.Marshal(&requestPayload)
-	if err != nil {
-		app.errorJSON(w, err)
-		return
-	}
-	resp, err := http.Post(fmt.Sprintf("%srecurring/history/%s", app.Mrkrabs, u), "application/json", bytes.NewBuffer((json_data)))
+	resp, err := http.Get(fmt.Sprintf("%srecurring/history/%s/%s", app.Mrkrabs, u, r_id))
 
 	if err != nil {
 		app.errorJSON(w, err)

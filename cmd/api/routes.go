@@ -38,7 +38,7 @@ func (app *Config) routes() http.Handler {
 
 		r.Get("/recurring/{user}/{account}", app.GetReccurringPayments)
 		r.Post("/recurring/add/{user}/{account}", app.AddReccurringPayment)
-		r.Post("/recurring/history/{user}", app.GetPaymentHistory)
+		r.Get("/recurring/history/{user}/{recurring_id}", app.GetPaymentHistory)
 
 		r.Get("/transaction/{user}/{account}", app.GetAllTransactions)
 		r.Get("/transaction/{user}/{account}/category/{category}", app.GetAllTransactionsOfCategory)
