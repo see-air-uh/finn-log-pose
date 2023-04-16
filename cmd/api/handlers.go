@@ -91,6 +91,8 @@ type RecurringPayment struct {
 	PaymentDescription string  `json:"paymentDescription"`
 	PaymentDate        string  `json:"paymentDate"`
 	PaymentType        string  `json:"paymentType"`
+	PaymentFrequency   string  `json:"paymentFrequency"`
+	NextPaymentDate    string  `json:"nextPaymentDate"`
 }
 
 type RecurringPaymentResponse struct {
@@ -208,6 +210,22 @@ func (app *Config) create_user(w http.ResponseWriter, cruPayload CreateUserPaylo
 	}
 
 	app.logmessage("created user", "created user with username "+cruResp.Username)
+
+	resp, err := http.Post(fmt.Sprintf("%saccounts/add/%s/%s", app.Mrkrabs, cruResp.Username, "Primary"), "application/json", bytes.NewBuffer([]byte{}))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data AddAccountResponse
+
+	err = decoder.Decode(&data)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
 
 	payload := jsonResponse{
 		Error:   false,
@@ -486,6 +504,7 @@ func (app *Config) AddReccurringPayment(w http.ResponseWriter, r *http.Request) 
 		PaymentDescription string  `json:"paymentDescription"`
 		PaymentDate        string  `json:"paymentDate"`
 		PaymentType        string  `json:"paymentType"`
+		PaymentFrequency   string  `json:"paymentFrequency"`
 	}
 
 	err := app.readJSON(w, r, &requestPayload)
